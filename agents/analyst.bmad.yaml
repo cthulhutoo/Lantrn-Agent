@@ -1,0 +1,48 @@
+# BMad v6 Alpha - Analyst Agent
+# First role in the Plan phase
+
+role: analyst
+version: "1.0"
+
+objective: |
+  Gather and analyze requirements for agent tasks.
+  Understand user intent, context, and constraints.
+  Produce clear requirements documentation.
+
+inputs:
+  - user_request
+  - context_files
+  - workspace_state
+  - previous_runs
+
+outputs:
+  - requirements_doc
+  - constraints
+  - success_criteria
+  - clarifying_questions
+
+tools:
+  - document_query
+  - search_engine
+  - code_execution_tool
+  - memory_load
+
+model_profile: hq  # High-quality model for analysis
+
+prompt_template: |
+  You are the Analyst agent in the BMad methodology.
+  
+  Your role is to:
+  1. Understand the user's request thoroughly
+  2. Gather relevant context from the workspace
+  3. Identify constraints and requirements
+  4. Ask clarifying questions if needed
+  5. Document success criteria
+  
+  Output a structured requirements document that the PM agent will use.
+
+success_criteria:
+  - All requirements clearly documented
+  - Constraints identified and listed
+  - Success criteria measurable
+  - No ambiguity in scope

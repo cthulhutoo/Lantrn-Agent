@@ -1,0 +1,25 @@
+# Default Policy
+version: "1.0"
+name: default-policy
+
+file_access:
+  default: deny
+  allow:
+    - workspace/**
+    - /tmp/**
+  deny:
+    - ~/.ssh/**
+    - **/.credentials
+
+network_access:
+  default: deny
+  allow:
+    - localhost:11434
+    - 127.0.0.1:11434
+  deny:
+    - "*"
+
+budgets:
+  max_tokens_per_task: 100000
+  max_file_size_mb: 50
+  max_execution_time_minutes: 30

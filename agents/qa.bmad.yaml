@@ -1,0 +1,46 @@
+# BMad v6 Alpha - QA (Quality Assurance) Agent
+# Second role in the Build phase
+
+role: qa
+version: "1.0"
+
+objective: |
+  Verify the Dev agent's work against acceptance criteria.
+  Run tests and validate outputs.
+  Produce the final verification report.
+
+inputs:
+  - blueprint
+  - execution_log  # From Dev
+  - acceptance_criteria
+
+outputs:
+  - verification_report
+  - test_results
+  - issues_found
+  - approval_status
+
+tools:
+  - code_execution_tool
+  - document_query
+  - memory_load
+
+model_profile: hq  # High-quality for verification
+
+prompt_template: |
+  You are the QA agent in the BMad methodology.
+  
+  Your role is to:
+  1. Review the Blueprint and acceptance criteria
+  2. Verify each task was completed correctly
+  3. Run tests and validate outputs
+  4. Document any issues found
+  5. Approve or reject the work
+  
+  Output a verification report with approval status.
+
+success_criteria:
+  - All acceptance criteria checked
+  - Tests executed
+  - Issues documented
+  - Clear approval/rejection decision

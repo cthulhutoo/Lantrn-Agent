@@ -1,0 +1,89 @@
+# Lantrn Agent Builder - Default Policy
+# BMad v6 Alpha style guardrails
+
+version: "1.0"
+name: default-policy
+
+# File access control
+file_access:
+  default: deny
+  allow:
+    - workspace/**
+    - /tmp/**
+    - /Volumes/NAS/lantrn-agent/**
+  deny:
+    - ~/.ssh/**
+    - ~/.env
+    - ~/.aws/**
+    - ~/.config/**
+    - **/.credentials
+    - **/.keys
+    - **/secrets.yaml
+
+# Network access control
+network_access:
+  default: deny
+  allow:
+    # Local LLM
+    - ollama.local:11434
+    - localhost:11434
+    - 127.0.0.1:11434
+    # Optional cloud providers (can be removed for air-gapped)
+    - api.openai.com
+    - api.anthropic.com
+    - venice.ai
+  deny:
+    - "*"  # Deny all others by default
+
+# Tool access control
+tool_access:
+  default: allow
+  deny:
+    - input  # Require explicit approval for user input
+  require_approval:
+    - browser_agent  # Browser actions need approval
+    - code_execution_tool  # Code execution needs approval (optional)
+
+# Resource budgets
+budgets:
+  max_tokens_per_task: 100000
+  max_file_size_mb: 50
+  max_execution_time_minutes: 30
+  max_files_per_task: 100
+  max_network_requests: 50
+
+# Execution constraints
+execution:
+  sandbox_enabled: true
+  allow_network: true  # Can be false for air-gapped
+  allow_file_write: true
+  allow_subprocess: true
+  max_subprocess_count: 5
+
+# Audit settings
+audit:
+  log_all_actions: true
+  log_file_changes: true
+  log_network_requests: true
+  log_tool_calls: true
+  retention_days: 90
+
+# Model profiles
+model_profiles:
+  fast:
+    provider: ollama
+    model: llama3.2:3b
+    ctx_length: 128000
+    temperature: 0.7
+  
+  hq:
+    provider: ollama
+    model: llama3.1:70b
+    ctx_length: 128000
+    temperature: 0.3
+  
+  offline:
+    provider: ollama
+    model: llama3.1:70b
+    ctx_length: 128000
+    temperature: 0.5

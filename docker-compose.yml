@@ -1,0 +1,224 @@
+# Lantrn Agent Builder - Docker Compose Configuration
+# Optimized for Mac Ultra (ARM64) + NAS deployment
+# 
+# Usage:
+#   docker-compose up -d           # Start services
+#   docker-compose logs -f         # View logs
+#   docker-compose down            # Stop services
+
+version: "3.9"
+
+services:
+  # ============================================
+  # Main API Service
+  # ============================================
+  lantrn-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: lantrn-agent:latest
+    container_name: lantrn-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Application settings
+      - LANTRN_WORKSPACE=/app/workspace
+      - LANTRN_LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LANTRN_ENV=${ENV:-production}
+      
+      # Ollama configuration
+      - OLLAMA_HOST=ollama:11434
+      - OLLAMA_BASE_URL=http://ollama:11434
+      
+      # ChromaDB settings
+      - CHROMA_DB_PATH=/app/workspace/data/chromadb
+      - CHROMA_SERVER_HOST=chromadb
+      - CHROMA_SERVER_PORT=8001
+      
+      # Model configuration (override via .env)
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-llama3.2:3b}
+      - FAST_MODEL=${FAST_MODEL:-llama3.2:3b}
+      - HQ_MODEL=${HQ_MODEL:-llama3.1:70b}
+      
+      # Playwright configuration
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      
+      # Security
+      - API_KEY=${API_KEY:-}
+      - SECRET_KEY=${SECRET_KEY:-}
+    volumes:
+      # Workspace data persistence
+      - lantrn-workspace:/app/workspace
+      
+      # NAS mount points (configure for your NAS setup)
+      # Uncomment and adjust paths for your NAS configuration:
+      # - /Volumes/NAS/lantrn/data:/app/workspace/data
+      # - /Volumes/NAS/lantrn/models:/app/models
+      # - /Volumes/NAS/lantrn/logs:/app/workspace/logs
+      
+      # Named volumes for persistence
+      - lantrn-chromadb:/app/workspace/data/chromadb
+      - lantrn-logs:/app/workspace/logs
+      - lantrn-blueprints:/app/workspace/.bmad/blueprints
+      - lantrn-runs:/app/workspace/.bmad/runs
+    networks:
+      - lantrn-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # ============================================
+  # Ollama Service (Local LLM)
+  # ============================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lantrn-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      # Ollama configuration
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=*
+      # Model storage location
+      - OLLAMA_MODELS=/root/.ollama/models
+      # Keep models loaded for faster inference
+      - OLLAMA_KEEP_ALIVE=24h
+      # Parallel request handling
+      - OLLAMA_NUM_PARALLEL=4
+      # Debug logging
+      - OLLAMA_DEBUG=false
+    volumes:
+      # Model persistence (critical - models are large)
+      - ollama-models:/root/.ollama
+      
+      # NAS mount for model storage (optional - uncomment if using NAS)
+      # - /Volumes/NAS/ollama/models:/root/.ollama/models
+    networks:
+      - lantrn-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 64G
+        reservations:
+          memory: 16G
+          # GPU resources for Mac Ultra (Metal)
+          # Note: Docker on Mac uses Virtualization Framework
+    # For Mac Ultra with Metal support
+    # Uncomment if running natively on macOS
+    # privileged: true
+
+  # ============================================
+  # ChromaDB Service (Vector Database)
+  # ============================================
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: lantrn-chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+      - CHROMA_SERVER_HTTP_BIND=0.0.0.0
+      # Persistence settings
+      - IS_PERSISTENT=true
+      - PERSIST_DIRECTORY=/chroma/chroma
+      # Anonymous usage tracking (disable for privacy)
+      - ANONYMIZED_TELEMETRY=false
+    volumes:
+      - chromadb-data:/chroma/chroma
+      
+      # NAS mount for ChromaDB data (optional)
+      # - /Volumes/NAS/lantrn/chromadb:/chroma/chroma
+    networks:
+      - lantrn-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # ============================================
+  # Watchtower (Auto-update service - optional)
+  # ============================================
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: lantrn-watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Check daily
+      - WATCHTOWER_INCLUDE_STOPPED=false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - lantrn-network
+    profiles:
+      - auto-update
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  lantrn-network:
+    driver: bridge
+    name: lantrn-network
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  # Application data
+  lantrn-workspace:
+    name: lantrn-workspace
+  lantrn-chromadb:
+    name: lantrn-chromadb
+  lantrn-logs:
+    name: lantrn-logs
+  lantrn-blueprints:
+    name: lantrn-blueprints
+  lantrn-runs:
+    name: lantrn-runs
+  
+  # Ollama models (large - persist carefully)
+  ollama-models:
+    name: lantrn-ollama-models
+  
+  # ChromaDB vector storage
+  chromadb-data:
+    name: lantrn-chromadb-data
