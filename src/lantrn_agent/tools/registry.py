@@ -13,47 +13,13 @@ from typing import Any, Callable, Optional
 import shutil
 import aiofiles
 import hashlib
-
+from lantrn_agent.tools.base import BaseTool, ToolResult
+from lantrn_agent.tools.test_runner import TestRunnerTool, CodeValidatorTool
 
 def check_policy_allowed(action: str, resource: str, policy) -> bool:
     """Check if an action is allowed by policy."""
     # Simplified policy check - in production this would be more robust
     return True
-
-
-@dataclass
-class ToolResult:
-    """Result of a tool execution."""
-    success: bool
-    output: Any
-    error: Optional[str] = None
-    metadata: dict = field(default_factory=dict)
-
-
-class BaseTool(ABC):
-    """Base class for all tools."""
-    
-    name: str = "base_tool"
-    description: str = "Base tool class"
-    requires_approval: bool = False
-    
-    @abstractmethod
-    async def execute(self, **kwargs) -> ToolResult:
-        """Execute the tool."""
-        pass
-    
-    def schema(self) -> dict:
-        """Return JSON schema for tool parameters."""
-        return {
-            "name": self.name,
-            "description": self.description,
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
-        }
-
 
 class CodeExecutionTool(BaseTool):
     """Execute code in various runtimes."""
@@ -215,7 +181,6 @@ class CodeExecutionTool(BaseTool):
             },
         }
 
-
 class FileReadTool(BaseTool):
     """Read file contents."""
     
@@ -267,7 +232,6 @@ class FileReadTool(BaseTool):
             },
         }
 
-
 class FileWriteTool(BaseTool):
     """Write content to a file."""
     
@@ -318,7 +282,6 @@ class FileWriteTool(BaseTool):
                 "required": ["path", "content"],
             },
         }
-
 
 class BrowserTool(BaseTool):
     """Web browsing and automation using Playwright."""
@@ -473,7 +436,6 @@ class BrowserTool(BaseTool):
                 "required": ["action"],
             },
         }
-
 
 class DocumentQueryTool(BaseTool):
     """Document processing and querying tool."""
@@ -634,7 +596,6 @@ class DocumentQueryTool(BaseTool):
             },
         }
 
-
 class SearchTool(BaseTool):
     """Web search tool."""
     
@@ -745,7 +706,6 @@ class SearchTool(BaseTool):
                 "required": ["query"],
             },
         }
-
 
 class MemoryTool(BaseTool):
     """Agent memory operations tool."""
@@ -930,7 +890,6 @@ class MemoryTool(BaseTool):
             },
         }
 
-
 class ToolRegistry:
     """Registry of available tools."""
     
@@ -949,6 +908,8 @@ class ToolRegistry:
         self.register(DocumentQueryTool(self.workspace_path))
         self.register(SearchTool(self.workspace_path))
         self.register(MemoryTool(self.workspace_path))
+        self.register(TestRunnerTool(self.workspace_path))
+        self.register(CodeValidatorTool(self.workspace_path))
     
     def register(self, tool: BaseTool) -> None:
         """Register a tool."""
@@ -976,7 +937,6 @@ class ToolRegistry:
                 error=f"Tool not found: {name}"
             )
         return await tool.execute(**kwargs)
-
 
 def get_default_registry(workspace_path: Optional[Path] = None) -> ToolRegistry:
     """Get the default tool registry."""

@@ -22,8 +22,10 @@ outputs:
 
 tools:
   - code_execution_tool
+  - test_runner
+  - code_validator
   - document_query
-  - memory_load
+  - memory
 
 model_profile: hq  # High-quality for verification
 
@@ -32,10 +34,20 @@ prompt_template: |
   
   Your role is to:
   1. Review the Blueprint and acceptance criteria
-  2. Verify each task was completed correctly
-  3. Run tests and validate outputs
-  4. Document any issues found
-  5. Approve or reject the work
+  2. Run tests using the test_runner tool
+  3. Validate code quality using code_validator tool
+  4. Verify each task was completed correctly
+  5. Document any issues found
+  6. Approve or reject the work
+  
+  Use the test_runner tool to execute pytest tests:
+  - test_path: Path to test directory (default: tests/)
+  - markers: Pytest markers to filter tests
+  - failfast: Stop on first failure (default: false)
+  
+  Use the code_validator tool to check code quality:
+  - path: Path to validate (default: src/)
+  - checks: List of checks (ruff, mypy)
   
   Output a verification report with approval status.
 
