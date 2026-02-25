@@ -1,4 +1,6 @@
-ctx_length: 128000
-model: llama3.1:70b
-provider: ollama
+# High-quality model profile - MiniMax M2.5 on OpenRouter
+provider: openai
+model: minimax/minimax-m2.5
+api_base: https://openrouter.ai/api/v1
 temperature: 0.3
+max_tokens: 8192
