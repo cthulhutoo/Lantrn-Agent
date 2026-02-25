@@ -943,3 +943,168 @@ def get_default_registry(workspace_path: Optional[Path] = None) -> ToolRegistry:
     if workspace_path is None:
         workspace_path = Path.cwd()
     return ToolRegistry(workspace_path)
+
+
+class APIConnectorTool(BaseTool):
+    """Connect to external APIs with authentication."""
+    
+    name = "api_connector"
+    description = "Make HTTP requests to external APIs"
+    requires_approval = True
+    
+    def __init__(self, workspace_path: Path, timeout: int = 30):
+        self.workspace_path = workspace_path
+        self.timeout = timeout
+    
+    async def execute(
+        self,
+        url: str,
+        method: str = "GET",
+        headers: dict = None,
+        params: dict = None,
+        data: dict = None,
+        json_data: dict = None,
+        auth_type: str = None,
+        auth_value: str = None,
+    ) -> ToolResult:
+        """Execute an HTTP request.
+        
+        Args:
+            url: Request URL
+            method: HTTP method (GET, POST, PUT, DELETE, PATCH)
+            headers: Request headers
+            params: Query parameters
+            data: Form data
+            json_data: JSON body
+            auth_type: Authentication type (bearer, basic, api_key)
+            auth_value: Authentication value
+            
+        Returns:
+            ToolResult with response data
+        """
+        import aiohttp
+        
+        headers = headers or {}
+        
+        # Handle authentication
+        if auth_type and auth_value:
+            if auth_type.lower() == "bearer":
+                headers["Authorization"] = f"Bearer {auth_value}"
+            elif auth_type.lower() == "basic":
+                import base64
+                encoded = base64.b64encode(auth_value.encode()).decode()
+                headers["Authorization"] = f"Basic {encoded}"
+            elif auth_type.lower() == "api_key":
+                headers["X-API-Key"] = auth_value
+        
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
+                async with session.request(
+                    method.upper(),
+                    url,
+                    headers=headers,
+                    params=params,
+                    data=data,
+                    json=json_data,
+                ) as response:
+                    response_text = await response.text()
+                    
+                    # Try to parse as JSON
+                    try:
+                        response_data = await response.json()
+                    except:
+                        response_data = response_text
+                    
+                    return ToolResult(
+                        success=200 <= response.status < 300,
+                        output={
+                            "status": response.status,
+                            "headers": dict(response.headers),
+                            "data": response_data,
+                        },
+                        error=None if 200 <= response.status < 300 else f"HTTP {response.status}: {response_text[:500]}",
+                    )
+        except asyncio.TimeoutError:
+            return ToolResult(
+                success=False,
+                output=None,
+                error=f"Request timed out after {self.timeout} seconds",
+            )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                output=None,
+                error=str(e),
+            )
+
+
+class WebhookTool(BaseTool):
+    """Trigger webhooks for external integrations."""
+    
+    name = "webhook"
+    description = "Send webhook notifications to external services"
+    requires_approval = True
+    
+    def __init__(self, workspace_path: Path):
+        self.workspace_path = workspace_path
+    
+    async def execute(
+        self,
+        webhook_url: str,
+        event_type: str,
+        payload: dict,
+        secret: str = None,
+    ) -> ToolResult:
+        """Send a webhook notification.
+        
+        Args:
+            webhook_url: Webhook URL
+            event_type: Event type (e.g., 'run.completed', 'step.failed')
+            payload: Event payload
+            secret: Optional secret for HMAC signature
+            
+        Returns:
+            ToolResult
+        """
+        import aiohttp
+        import hmac
+        import hashlib
+        import json
+        
+        headers = {
+            "Content-Type": "application/json",
+            "X-Event-Type": event_type,
+        }
+        
+        body = json.dumps(payload)
+        
+        # Add HMAC signature if secret provided
+        if secret:
+            signature = hmac.new(
+                secret.encode(),
+                body.encode(),
+                hashlib.sha256,
+            ).hexdigest()
+            headers["X-Signature"] = f"sha256={signature}"
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    webhook_url,
+                    headers=headers,
+                    data=body,
+                ) as response:
+                    return ToolResult(
+                        success=200 <= response.status < 300,
+                        output={
+                            "status": response.status,
+                            "response": await response.text(),
+                        },
+                        error=None if 200 <= response.status < 300 else f"Webhook failed: HTTP {response.status}",
+                    )
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                output=None,
+                error=str(e),
+            )
