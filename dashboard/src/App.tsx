@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { Layout } from '@/components'
-import { Home, Plan, Build, Agents, Models, Runs } from '@/pages'
+import { Home, Plan, Build, Agents, Models, Runs, Settings, PolicyEditor, Logs } from '@/pages'
 
 function App() {
   return (
@@ -12,6 +12,9 @@ function App() {
         <Route path="/agents" element={<Agents />} />
         <Route path="/models" element={<Models />} />
         <Route path="/runs" element={<Runs />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/policy" element={<PolicyEditor />} />
+        <Route path="/logs" element={<Logs />} />
       </Routes>
     </Layout>
   )

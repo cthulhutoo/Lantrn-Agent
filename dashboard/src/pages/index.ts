@@ -1,6 +1,9 @@
-export { Home } from './Home'
-export { Plan } from './Plan'
-export { Build } from './Build'
-export { Agents } from './Agents'
-export { Models } from './Models'
-export { Runs } from './Runs'
+export { default as Home } from './Home';
+export { default as Agents } from './Agents';
+export { default as Models } from './Models';
+export { default as Plan } from './Plan';
+export { default as Build } from './Build';
+export { default as Runs } from './Runs';
+export { default as Settings } from './Settings';
+export { default as PolicyEditor } from './PolicyEditor';
+export { default as Logs } from './Logs';

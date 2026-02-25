@@ -1,16 +1,19 @@
 import { ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { 
-  Home, 
-  FileText, 
-  Hammer, 
-  Users, 
-  Cpu, 
-  History, 
-  Menu, 
+import {
+  Home,
+  FileText,
+  Hammer,
+  Users,
+  Cpu,
+  History,
+  Menu,
   X,
   Activity,
-  ChevronRight
+  ChevronRight,
+  Settings,
+  Shield,
+  ScrollText
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useWebSocket } from '@/hooks'
@@ -28,6 +31,12 @@ const navigation = [
   { name: 'Runs', href: '/runs', icon: History },
 ]
 
+const systemNav = [
+  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Policy', href: '/policy', icon: Shield },
+  { name: 'Logs', href: '/logs', icon: ScrollText },
+]
+
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
@@ -42,7 +51,7 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-dark-950">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -62,7 +71,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
               <span className="text-lg font-bold gradient-text">Lantrn</span>
             </Link>
-            <button 
+            <button
               className="lg:hidden p-1 rounded-lg hover:bg-dark-700 transition-colors"
               onClick={() => setSidebarOpen(false)}
             >
@@ -70,8 +79,11 @@ export function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          {/* Navigation */}
+          {/* Main Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+            <div className="text-xs font-semibold text-dark-500 uppercase tracking-wider px-3 mb-2">
+              Main
+            </div>
             {navigation.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href)
@@ -81,8 +93,33 @@ export function Layout({ children }: LayoutProps) {
                   to={item.href}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                    active 
-                      ? "bg-primary-600/20 text-primary-400 border border-primary-500/30" 
+                    active
+                      ? "bg-primary-600/20 text-primary-400 border border-primary-500/30"
+                      : "text-dark-300 hover:bg-dark-800 hover:text-white"
+                  )}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                  {active && <ChevronRight className="w-4 h-4 ml-auto" />}
+                </Link>
+              )
+            })}
+            
+            <div className="text-xs font-semibold text-dark-500 uppercase tracking-wider px-3 mt-6 mb-2">
+              System
+            </div>
+            {systemNav.map((item) => {
+              const Icon = item.icon
+              const active = isActive(item.href)
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                    active
+                      ? "bg-primary-600/20 text-primary-400 border border-primary-500/30"
                       : "text-dark-300 hover:bg-dark-800 hover:text-white"
                   )}
                   onClick={() => setSidebarOpen(false)}
@@ -100,13 +137,13 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-2 text-sm">
               <div className={cn(
                 "w-2 h-2 rounded-full",
-                wsStatus === 'connected' ? "bg-green-500" : 
-                wsStatus === 'connecting' ? "bg-yellow-500 animate-pulse" : 
+                wsStatus === 'connected' ? "bg-green-500" :
+                wsStatus === 'connecting' ? "bg-yellow-500 animate-pulse" :
                 "bg-red-500"
               )} />
               <span className="text-dark-400">
-                {wsStatus === 'connected' ? 'Connected' : 
-                 wsStatus === 'connecting' ? 'Connecting...' : 
+                {wsStatus === 'connected' ? 'Connected' :
+                 wsStatus === 'connecting' ? 'Connecting...' :
                  'Disconnected'}
               </span>
             </div>
@@ -119,7 +156,7 @@ export function Layout({ children }: LayoutProps) {
         {/* Top bar */}
         <header className="sticky top-0 z-30 h-16 bg-dark-900/80 backdrop-blur-md border-b border-dark-700">
           <div className="flex items-center justify-between h-full px-4">
-            <button 
+            <button
               className="lg:hidden p-2 rounded-lg hover:bg-dark-700 transition-colors"
               onClick={() => setSidebarOpen(true)}
             >
@@ -128,7 +165,8 @@ export function Layout({ children }: LayoutProps) {
             
             <div className="flex items-center gap-4">
               <h1 className="text-lg font-semibold text-white hidden sm:block">
-                {navigation.find(n => isActive(n.href))?.name || 'Dashboard'}
+                {navigation.find(n => isActive(n.href))?.name || 
+                 systemNav.find(n => isActive(n.href))?.name || 'Dashboard'}
               </h1>
             </div>
 
